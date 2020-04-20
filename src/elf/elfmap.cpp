@@ -62,7 +62,7 @@ void ElfMap::parseElf(const char *filename) {
     lseek(fd, 0, SEEK_SET);
 
     // make a private copy of the file in memory
-    int prot = PROT_READ /*| PROT_WRITE*/;
+    int prot = PROT_READ | PROT_WRITE;
     map = mmap(NULL, length, prot, MAP_PRIVATE, fd, 0);
     if(map == (void *)-1) throw "can't mmap executable image\n";
 
