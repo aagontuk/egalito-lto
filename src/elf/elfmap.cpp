@@ -7,6 +7,7 @@
 #include <fcntl.h>
 
 #include "elfmap.h"
+#include "symbol.h"
 #include "log/log.h"
 
 ElfMap::ElfMap() : map(nullptr), length(0), fd(-1) {
@@ -165,6 +166,37 @@ void ElfMap::makeVirtualAddresses() {
     }
 }
 
+ElfXX_Sym *ElfMap::findSymbol(const char *name) {
+    ElfSection *symbolSection = findSection(".symtab");
+    ElfXX_Shdr *sheader = symbolSection->getHeader();
+    ElfXX_Sym *sym = getSectionReadPtr<ElfXX_Sym *>(symbolSection);
+    int symCount = sheader->sh_size / sheader->sh_entsize;
+
+    for(int i = 0; i < symCount; i++, sym++) {
+        if(!strcmp(strtab + sym->st_name, name)) {
+            return sym; 
+        } 
+    }
+
+    return nullptr;
+}
+
+ElfXX_Sym *ElfMap::findDynSymbol(const char *name) {
+    ElfSection *symbolSection = findSection(".dynsym");
+    ElfXX_Shdr *sheader = symbolSection->getHeader();
+    ElfXX_Sym *sym = getSectionReadPtr<ElfXX_Sym *>(symbolSection);
+    int symCount = sheader->sh_size / sheader->sh_entsize;
+
+    for(int i = 0; i < symCount; i++, sym++) {
+        if(!strcmp(dynstr + sym->st_name, name)) {
+            return sym; 
+        } 
+    }
+
+    return nullptr;
+}
+
+
 ElfSection *ElfMap::findSection(const char *name) const {
     auto it = sectionMap.find(name);
     if(it == sectionMap.end()) return nullptr;
@@ -216,10 +248,10 @@ std::vector<void *> ElfMap::findSectionsByFlag(long flag) const {
     return sections;
 }
 
-
 address_t ElfSection::convertOffsetToVA(size_t offset) {
     return virtualAddress + offset;
 }
+
 
 address_t ElfSection::convertVAToOffset(address_t va) {
     return va - virtualAddress;

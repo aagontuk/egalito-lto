@@ -82,9 +82,13 @@ public:
     address_t getCopyBaseAddress() const { return copyBase; }
     address_t getRWCopyBaseAddress() const { return rwCopyBase; }
     size_t getLength() const { return length; }
+    
     const char *getStrtab() const { return strtab; }
     const char *getDynstrtab() const { return dynstr; }
     const char *getSHStrtab() const { return shstrtab; }
+
+    ElfXX_Sym *findSymbol(const char *name);
+    ElfXX_Sym *findDynSymbol(const char *name);
 
     ElfSection *findSection(const char *name) const;
     ElfSection *findSection(int index) const;
