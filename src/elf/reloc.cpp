@@ -30,6 +30,17 @@ Reloc *RelocList::find(address_t address) {
     return (it != relocMap.end() ? (*it).second : nullptr);
 }
 
+Reloc *RelocList::find(const char *name) {
+    for(auto it = begin(); it != end(); it++) {
+        if((*it)->getSymbol()) {
+            if(strcmp(name, (*it)->getSymbol()->getName()) == 0) {
+                return *it;
+            }
+        }
+    }
+    return nullptr;
+}
+
 RelocSection *RelocList::getSection(const std::string &name) {
     auto it = sectionList.find(name);
     return (it != sectionList.end() ? (*it).second : nullptr);

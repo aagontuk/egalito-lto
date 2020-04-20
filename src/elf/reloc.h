@@ -77,6 +77,7 @@ public:
     ListType::iterator end() { return relocList.end(); }
 
     Reloc *find(address_t address);
+    Reloc *find(const char *name);
 
     RelocSection *getSection(const std::string &name);
 
