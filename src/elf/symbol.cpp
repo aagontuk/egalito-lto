@@ -55,6 +55,14 @@ bool Symbol::isMarker() const {
         && shndx > 0;
 }
 
+void Symbol::updateElfMap(ElfMap *elfmap, int symtype){
+    ElfXX_Sym *sym;
+    sym = (symtype == 0 ? elfmap->findSymbol(name) : elfmap->findDynSymbol(name));
+    if(sym){
+        sym->st_value = address;
+    }
+}
+
 bool SymbolList::add(Symbol *symbol, size_t index) {
     // Can't check just by name since it may not be unique
     //auto it = symbolMap.find(symbol->getName());

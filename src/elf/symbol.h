@@ -67,6 +67,7 @@ public:
 
     void setName(const char *name) { this->name = name; }
     void setSize(size_t size) { this->size = size; }
+    void setAddress(address_t addr) { this->address = addr; }
     void setVersion(SymbolVersion *version) { this->version = version; }
     void setAliasFor(Symbol *aliasFor) { this->aliasFor = aliasFor; }
     void setType(SymbolType type) { this->symbolType = type; }
@@ -77,6 +78,8 @@ public:
 
     bool isFunction() const;
     bool isMarker() const;
+
+    void updateElfMap(ElfMap *elfmap, int symtype);
 
 public:
     static unsigned char typeFromInternalToElf(SymbolType type);
