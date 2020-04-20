@@ -25,6 +25,8 @@ public:
     ElfXX_Shdr *getHeader() { return shdr; }
     address_t getVirtualAddress() { return virtualAddress; }
     address_t getReadAddress() { return readAddress; }
+    address_t getStartOffset() { return shdr->sh_offset; }
+    address_t getEndOffset() {return shdr->sh_offset + shdr->sh_size - 1; }
     void setVirtualAddress(address_t address) { virtualAddress = address; }
     void setReadAddress(address_t address) { readAddress = address; }
     address_t convertOffsetToVA(size_t offset);
