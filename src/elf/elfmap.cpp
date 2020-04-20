@@ -285,3 +285,17 @@ bool ElfMap::hasRelocations() const {
     return !findSectionsByType(SHT_RELA).empty();
     //return findSection(".rela.text") != nullptr;
 }
+
+void ElfMap::dumpToFile(const char *fileName) {
+    int fdd = open(fileName, O_CREAT | O_WRONLY, S_IRWXU | S_IRGRP | S_IROTH);
+
+    if(fdd < 0) {
+        perror(fileName);
+        return;
+    }
+
+    int nbytes = write(fdd, map, length);
+    if(nbytes > 0){
+        close(fdd);
+    }
+}

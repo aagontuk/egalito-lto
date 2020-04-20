@@ -101,7 +101,7 @@ public:
 
     std::vector<void *> findSectionsByType(int type) const;
     std::vector<void *> findSectionsByFlag(long flag) const;
-
+    
     bool hasInterpreter() const { return interpreter != nullptr; }
     const char *getInterpreter() const { return interpreter; }
 
@@ -119,6 +119,7 @@ public:
         { return segmentList; }
     const std::vector<ElfSection *> &getSectionList() const
         { return sectionList; }
+    void dumpToFile(const char *fileName);
 };
 
 template <typename T>
