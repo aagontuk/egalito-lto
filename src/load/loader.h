@@ -16,7 +16,7 @@ public:
     bool parse(const char *filename);
 
     /* these must be called in this order */
-    void setupEnvironment(int argc, char *argv[]);
+    void setupEnvironment(int argc, int remove_count, char *argv[]);
     void generateCode();
     void run();
 private:

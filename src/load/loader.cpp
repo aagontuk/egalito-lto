@@ -2,6 +2,7 @@
 #include <cstdio>  // for std::fflush
 #include <cstdlib>  // for getenv
 #include <unistd.h>  // for STDERR_FILENO
+#include <getopt.h> // for getopt_long
 
 #include "loader.h"
 #include "usage.h"
@@ -81,9 +82,9 @@ bool EgalitoLoader::parse(const char *filename) {
     return true;
 }
 
-void EgalitoLoader::setupEnvironment(int argc, char *argv[]) {
+void EgalitoLoader::setupEnvironment(int argc, int remove_count, char *argv[]) {
     adjustAuxiliaryVector(argv, setup->getElfMap(), nullptr);
-    auto adjust = removeLoaderFromArgv(argv);
+    auto adjust = removeLoaderFromArgv(argv, remove_count);
     egalito_initial_stack += adjust;
     argv = (char **)((char *)argv + adjust);
 
@@ -291,7 +292,33 @@ void EgalitoLoader::otherPassesAfterMove() {
 
 #include <sys/personality.h>
 int main(int argc, char *argv[]) {
-    if(argc < 2) {
+    const char *program;
+    const char *order_file;
+    int c;
+    int option_index = 0;
+    
+    struct option long_options[] = {
+        {"function_order", required_argument, 0, 'f'},
+        {0, 0, 0, 0}
+    };
+
+    /* Process arguments */
+    while((c = getopt_long(argc, argv, "f:", long_options, &option_index)) != -1) {
+        switch(c) {
+            case 'f':
+               order_file = optarg; 
+               break;
+            default:
+               printUsage(argv[0]);
+               return -1;
+        } 
+    }
+
+    /* Process non-option arguments */
+    if(optind < argc) {
+        program = argv[optind]; 
+    }
+    else {
         printUsage(argv[0]);
         return -1;
     }
@@ -309,13 +336,11 @@ int main(int argc, char *argv[]) {
 
     GroupRegistry::getInstance()->dumpSettings();
 
-    LOG(0, "loading ELF program [" << argv[1] << "]");
-
-    const char *program = argv[1];
-
+    LOG(0, "loading ELF program [" << program << "]");
+    
     EgalitoLoader loader;
     if(loader.parse(program)) {
-        loader.setupEnvironment(argc, argv);
+        loader.setupEnvironment(argc, optind, argv);
         loader.generateCode();
         loader.run();  // never returns
     }
