@@ -337,8 +337,13 @@ int main(int argc, char *argv[]) {
     GroupRegistry::getInstance()->dumpSettings();
 
     LOG(0, "loading ELF program [" << program << "]");
-    
+
     EgalitoLoader loader;
+    
+    if(order_file) {
+        egalito_conductor_setup->parseOrderFile(order_file);
+    }
+
     if(loader.parse(program)) {
         loader.setupEnvironment(argc, optind, argv);
         loader.generateCode();

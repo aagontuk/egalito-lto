@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cstring>
+#include <fstream>
 #include <climits>  // for PATH_MAX
 #include <unistd.h>  // for readlink
 #include "config.h"
@@ -20,6 +21,7 @@
 #include "log/registry.h"
 #include "log/log.h"
 #include "log/temp.h"
+#include "elf/textsection.h"
 
 address_t runEgalito(ElfMap *elf, ElfMap *egalito);
 
@@ -82,6 +84,14 @@ Module *ConductorSetup::injectElfFiles(const char *executable, Library::Role rol
     auto firstModule = conductor->parseAnything(executable, role);
     if(firstModule->getLibrary()->getRole() == Library::ROLE_MAIN) {
         this->elf = firstModule->getElfSpace()->getElfMap();
+
+        if(getFunctionOrder().size()) {
+            TextSection tsec(this->elf);  
+            tsec.reorder(getFunctionOrder());
+        }
+
+        this->elf->dumpToFile("main.re");
+
         findEntryPointFunction();
     }
 
@@ -417,6 +427,17 @@ void ConductorSetup::copyCodeToNewAddresses(Sandbox *sandbox, bool useDisps) {
 
 void ConductorSetup::moveCodeMakeExecutable(Sandbox *sandbox) {
     sandbox->finalize();
+}
+
+void ConductorSetup::parseOrderFile(const char *fileName) {
+    std::ifstream f(fileName);
+    std::string line;
+
+    while(std::getline(f, line)) {
+        functionOrder.push_back(line);
+    }
+
+    f.close();
 }
 
 void ConductorSetup::dumpElfSpace(ElfSpace *space) {

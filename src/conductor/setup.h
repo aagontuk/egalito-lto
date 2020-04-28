@@ -28,6 +28,8 @@ private:
     ElfMap *egalito;
     Conductor *conductor;
     address_t sandboxBase;
+
+    std::vector<std::string> functionOrder;
 public:
     ConductorSetup() : elf(nullptr), egalito(nullptr), conductor(nullptr),
         sandboxBase(SANDBOX_BASE_ADDRESS) {}
@@ -63,6 +65,8 @@ public:
     ElfMap *getEgalitoElfMap() const { return egalito; }
     Conductor *getConductor() const { return conductor; }
 public:
+    void parseOrderFile(const char *fileName);
+    std::vector<std::string> &getFunctionOrder(void) { return functionOrder; }
     void dumpElfSpace(ElfSpace *space);
     void dumpFunction(const char *function, ElfSpace *space = nullptr);
     address_t getEntryPoint();
