@@ -60,7 +60,7 @@ private:
     const char *name;
     address_t startAddress;
     address_t endAddress;
-    uint32_t offsetChange;
+    int offsetChange;
     std::vector<CallInstruction *> callList;
 
 public:
@@ -70,11 +70,11 @@ public:
     const char *getName(void) { return name; }
     address_t getStartAddress(void) { return startAddress; }
     address_t getEndAddress(void){ return endAddress; }
-    uint32_t &getOffsetChange(void) { return offsetChange; }
+    int &getOffsetChange(void) { return offsetChange; }
 
     void setStartAddress(address_t addr) { startAddress = addr; }
     void setEndAddress(address_t addr) { endAddress = addr; }
-    void setOffsetChange(uint32_t offcng) { offsetChange = offcng; }
+    void setOffsetChange(int offcng) { offsetChange = offcng; }
 
     void addCall(CallInstruction *pltCall) { callList.push_back(pltCall); }
     std::vector<CallInstruction *> &getCallList() { return callList; }

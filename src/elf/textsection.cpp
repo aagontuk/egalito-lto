@@ -161,7 +161,7 @@ void TextSection::reorder(std::vector<std::string> orderList) {
         
         memcpy(newTextSection + bytesWritten, elfmap + tf->getStartAddress(), fsize);
 
-        uint32_t offset;
+        int offset;
         
         if(!bytesWritten) {
             offset = this->startAddress - tf->getStartAddress();
@@ -177,28 +177,11 @@ void TextSection::reorder(std::vector<std::string> orderList) {
         tf->setOffsetChange(offset);
 
         bytesWritten += fsize;
-        std::cout << "NEW: " << tf->getName() << "|" << tf->getStartAddress() << "|"
-            << tf->getEndAddress() << std::endl;
     }
 
-    std::cout << "Old Function Order:" << std::endl;
-    for(auto f: functionList){
-        std::cout << f->getName() << std::endl; 
-    }
-    
     sortFunctionList();
     
-    std::cout << "New Function Order:" << std::endl;
-    for(auto f: functionList){
-        std::cout << f->getName() << std::endl; 
-    }
-
-    std::cout << "Old Text Section:" << std::endl;
-    printHex(elfmap + startAddress, textSection->getSize());
-
-    std::cout << "New Text Section:" << std::endl;
     memcpy(elfmap + startAddress, newTextSection, bytesWritten);
-    printHex(elfmap + startAddress, bytesWritten);
 
     updateSymbols();
     fixCallInstructions();
@@ -209,14 +192,10 @@ void TextSection::reorder(std::vector<std::string> orderList) {
 
 void TextSection::updateSymbols() {
     Symbol *s;
-    std::cout << "Symbols:" << std::endl;
     for(auto f: functionList) {
         s = symbols->find(f->getName());
 
         if(s && s->getAddress() != f->getStartAddress()){
-            std::cout << f->getName() << "|"
-                << std::hex << s->getAddress() << std::endl;
-             
             s->setAddress(f->getStartAddress());
             s->updateElfMap(sourceElfMap, 0);
         }
@@ -224,9 +203,6 @@ void TextSection::updateSymbols() {
         s = dynSymbols->find(f->getName());
         
         if(s && s->getAddress() != f->getStartAddress()){
-            std::cout << f->getName() << "|"
-                << std::hex << s->getAddress() << std::endl;
-             
             s->setAddress(f->getStartAddress());
             s->updateElfMap(sourceElfMap, 1);
         }
@@ -239,7 +215,7 @@ void TextSection::fixCallInstructions() {
     for(auto fn : functionList) {
         for(auto call : fn->getCallList()) {
             if(call->isPltCall()) {
-                uint32_t offset = fn->getOffsetChange();
+                int offset = fn->getOffsetChange();
                 if(offset) {
                     call->setAddress(call->getAddress() + offset);
                     call->setOffset(call->getOffset() - offset);
@@ -248,7 +224,7 @@ void TextSection::fixCallInstructions() {
                 } 
             }
             else {
-                uint32_t offset = fn->getOffsetChange();
+                int offset = fn->getOffsetChange();
                 if(offset) {
                     call->setAddress(call->getAddress() + offset);
                 }
@@ -267,8 +243,6 @@ void TextSection::fixCallInstructions() {
 void TextSection::fixEntryPoint() {
     ElfXX_Ehdr *ehdr = (ElfXX_Ehdr *)(sourceElfMap->getMap());
     ehdr->e_entry = this->getEntrySymbol()->getAddress();
-    std::cout << "Entry Symbol: " << this->getEntrySymbol()->getName() << std::endl;
-    std::cout << "Symbol Address: " << std::hex << this->getEntrySymbol()->getAddress() << std::endl;
 }
 
 void TextSection::printHex(const char *content, int length){
