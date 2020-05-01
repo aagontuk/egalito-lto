@@ -1,6 +1,7 @@
 #ifndef EGALITO_CONDUCTOR_CONDUCTOR_H
 #define EGALITO_CONDUCTOR_CONDUCTOR_H
 
+#include <vector>
 #include <string>
 #include <set>
 #include "types.h"
@@ -27,7 +28,8 @@ public:
     ~Conductor();
 
     Module *parseAnything(const std::string &fullPath,
-        Library::Role role = Library::ROLE_UNKNOWN);
+        Library::Role role = Library::ROLE_UNKNOWN,
+        std::vector<std::string> *functionOrder = nullptr);
     Module *parseExecutable(ElfMap *elf, const std::string &fullPath = "");
     Module *parseEgalito(ElfMap *elf, const std::string &fullPath = "");
     void parseEgalitoElfSpaceOnly(ElfMap *elf, Module *module,

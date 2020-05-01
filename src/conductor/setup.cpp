@@ -81,16 +81,9 @@ Module *ConductorSetup::injectElfFiles(const char *executable, Library::Role rol
     if(!conductor) createNewProgram();
 
     // executable can be a shared library. this->elf stores main module
-    auto firstModule = conductor->parseAnything(executable, role);
+    auto firstModule = conductor->parseAnything(executable, role, getFunctionOrder());
     if(firstModule->getLibrary()->getRole() == Library::ROLE_MAIN) {
         this->elf = firstModule->getElfSpace()->getElfMap();
-
-        if(getFunctionOrder().size()) {
-            TextSection tsec(this->elf);  
-            tsec.reorder(getFunctionOrder());
-        }
-
-        this->elf->dumpToFile("main.re");
 
         findEntryPointFunction();
     }

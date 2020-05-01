@@ -66,7 +66,7 @@ public:
     Conductor *getConductor() const { return conductor; }
 public:
     void parseOrderFile(const char *fileName);
-    std::vector<std::string> &getFunctionOrder(void) { return functionOrder; }
+    std::vector<std::string> *getFunctionOrder(void) { return &functionOrder; }
     void dumpElfSpace(ElfSpace *space);
     void dumpFunction(const char *function, ElfSpace *space = nullptr);
     address_t getEntryPoint();

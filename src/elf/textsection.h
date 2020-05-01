@@ -8,7 +8,7 @@
 #include "reloc.h"
 #include "types.h"
 
-class CallInstruction;
+class RelativeInstruction;
 class TextFunction;
 
 class TextSection {
@@ -46,10 +46,10 @@ private:
     static bool comp(TextFunction *tf1, TextFunction *tf2);
     void sortFunctionList();
     void calcFunctionEndAddress();
-    void scanCallInstructions();
+    void scanRelativeInstructions();
     
     void updateSymbols();
-    void fixCallInstructions();
+    void fixRelativeInstructions();
     void fixEntryPoint();
     
     void printHex(const char *content, int length);
@@ -61,7 +61,7 @@ private:
     address_t startAddress;
     address_t endAddress;
     int offsetChange;
-    std::vector<CallInstruction *> callList;
+    std::vector<RelativeInstruction *> instructionList;
 
 public:
     TextFunction(const char *name, address_t start, address_t end)
@@ -76,29 +76,47 @@ public:
     void setEndAddress(address_t addr) { endAddress = addr; }
     void setOffsetChange(int offcng) { offsetChange = offcng; }
 
-    void addCall(CallInstruction *pltCall) { callList.push_back(pltCall); }
-    std::vector<CallInstruction *> &getCallList() { return callList; }
+    void addInstruction(RelativeInstruction *relIns) { instructionList.push_back(relIns); }
+    std::vector<RelativeInstruction *> &getInstructionList() { return instructionList; }
 };
 
-class CallInstruction {
+class RelativeInstruction {
+public:
+    enum Type {
+        CALL,
+        PLTCALL,
+        RIP 
+    };
+
 private:
     std::string callingFunctionName;
     address_t instructionAddress;
     uint32_t callOffset;
-    bool isPLTCall;
+    Type instructionType;
+    std::string mnemonic;
+    int instructionSize;
+    uint8_t firstByte;
 
 public:
-    CallInstruction(const char *name, address_t addr, uint32_t offset, bool isPlt = false)
+    RelativeInstruction(const char *name, address_t addr, uint32_t offset, Type type)
         : callingFunctionName(name), instructionAddress(addr), callOffset(offset),
-            isPLTCall(isPlt) {}
+            instructionType(type) {}
 
-    std::string &getCallingFunctionName() { return callingFunctionName; }
+    Type getType() { return instructionType; }
+    std::string &getMnemonic() { return mnemonic; }
+    int getInstructionSize() { return instructionSize; }
+    uint8_t &getFistByte() { return  firstByte; }
     address_t getAddress() { return instructionAddress; }
     address_t getOffset() { return callOffset; }
-    bool isPltCall() { return isPLTCall; }
-    void setCallingFunctionName(std::string name) { callingFunctionName = name; }
+    std::string &getCallingFunctionName() { return callingFunctionName; }
+    
+    void setType(Type type) { instructionType =type; }
+    void setMnemonic(std::string nc) { mnemonic = nc; }
+    void setInstructionSize(int size) { instructionSize = size; }
+    void setFirstByte(uint8_t byte) { firstByte = byte; }
     void setAddress(address_t addr) { instructionAddress = addr; }
     void setOffset(address_t offset) { callOffset = offset; }
+    void setCallingFunctionName(std::string name) { callingFunctionName = name; }
 };
 
 #endif
