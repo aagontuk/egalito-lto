@@ -115,6 +115,24 @@ void EgalitoInterface::generate(const std::string &outputName,
     setup.generateMirrorELF(outputName.c_str(), order);
 }
 
+SectionList *EgalitoInterface::generate(const std::vector<Function *> &order) {
+    auto program = getProgram();
+    prepareForGeneration(false);
+
+    // generate mirror executable.
+    LOG(0, "Generating ELF Sections...");
+    LdsoRefsPass ldsoRefs;
+    program->accept(&ldsoRefs);
+
+    ExternalSymbolLinksPass externalSymbolLinks;
+    program->accept(&externalSymbolLinks);
+
+    IFuncPLTs ifuncPLTs;
+    program->accept(&ifuncPLTs);
+
+    return setup.generateELFSectionList(order);
+}
+
 void EgalitoInterface::assignNewFunctionAddresses() {
     auto sandbox = setup.makeLoaderSandbox();
     setup.moveCodeAssignAddresses(sandbox, true);

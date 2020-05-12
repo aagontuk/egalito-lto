@@ -7,6 +7,7 @@
 #include "types.h"
 #include <elf.h>
 #include "elfxx.h"
+#include "generate/sectionlist.h"
 
 class ELFGen;
 class ElfSection {
@@ -66,6 +67,7 @@ private:
 public:
     ElfMap(pid_t pid);
     ElfMap(const char *filename);
+    ElfMap(SectionList *sections);
     ElfMap(void *self);
     ~ElfMap();
     static bool isElf(const char *filename);

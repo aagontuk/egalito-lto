@@ -59,6 +59,15 @@ void SegMap::mapAllSegments(ConductorSetup *setup) {
     }
 }
 
+void SegMap::unmapAllSegments(ConductorSetup *setup) {
+    for(auto module : CIter::modules(setup->getConductor()->getProgram())) {
+        for(auto region : CIter::regions(module)) {
+            if(dynamic_cast<TLSDataRegion *>(region)) continue;
+            unmapRegion(region);
+        }
+    }
+}
+
 void SegMap::mapSegments(ElfMap &elf, address_t baseAddress) {
     auto segmentList = elf.getSegmentList();
     try {
@@ -197,4 +206,15 @@ void SegMap::mapRegion(DataRegion *region) {
     LOG(1, "memcpy " << std::hex << (void *)dataBytes.c_str()
         << " to " << address << " size " << dataBytes.length());
     std::memcpy((void *)address, dataBytes.c_str(), dataBytes.length());
+}
+
+void SegMap::unmapRegion(DataRegion *region) {
+    address_t address = region->getAddress();
+    address_t address_rounded = ROUND_DOWN(address);
+    size_t address_offset = address - address_rounded;
+    size_t memsz_pages = ROUND_UP(region->getSize() + address_offset);
+
+    if(munmap((void *)address_rounded, memsz_pages)) {
+        std::cout << "Unmaping: " << region->getName() << "@FAILED" << std::endl;
+    }
 }

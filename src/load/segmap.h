@@ -11,10 +11,12 @@ class DataRegion;
 class SegMap {
 public:
     static void mapAllSegments(ConductorSetup *setup);
+    static void unmapAllSegments(ConductorSetup *setup);
     static void mapSegments(ElfMap &elf, address_t baseAddress = 0);
 private:
     static void mapElfSegment(ElfMap &elf, Elf64_Phdr *phdr, address_t baseAddress);
     static void mapRegion(DataRegion *region);
+    static void unmapRegion(DataRegion *region);
 };
 
 #endif

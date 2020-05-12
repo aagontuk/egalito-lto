@@ -1,3 +1,4 @@
+#include <iostream>
 #include <cassert>
 #include <cstring>
 #include <fstream>
@@ -285,6 +286,12 @@ Sandbox *ConductorSetup::makeStaticExecutableSandbox(const char *outputFile) {
         AlignedWatermarkAllocator<MemoryBufferBacking>>(backing);
 }
 
+Sandbox *ConductorSetup::makeStaticExecutableSandbox() {
+    auto backing = MemoryBufferBacking(SANDBOX_BASE_ADDRESS, MAX_SANDBOX_SIZE);
+    return new SandboxImpl<MemoryBufferBacking,
+        AlignedWatermarkAllocator<MemoryBufferBacking>>(backing);
+}
+
 Sandbox *ConductorSetup::makeKernelSandbox(const char *outputFile) {
     auto backing = MemoryBufferBacking(LINUX_KERNEL_CODE_BASE, MAX_SANDBOX_SIZE);
     return new SandboxImpl<MemoryBufferBacking,
@@ -373,6 +380,40 @@ bool ConductorSetup::generateMirrorELF(const char *outputFile,
     generator.generateContent(outputFile);
     return true;
 }
+
+SectionList *ConductorSetup::generateELFSectionList(const std::vector<Function *> &order) {
+
+    auto sandbox = makeStaticExecutableSandbox();
+    auto backing = static_cast<MemoryBufferBacking *>(sandbox->getBacking());
+    auto program = conductor->getProgram();
+
+    auto generator = MirrorGen(program, backing);
+    generator.preCodeGeneration();
+
+    {
+        ////moveCode(sandbox, true);  // calls sandbox->finalize()
+        //moveCodeAssignAddresses(sandbox, true);
+        Generator(sandbox, true).assignAddresses(conductor->getProgram(), order);
+        generator.afterAddressAssign();
+        {
+            // get data sections; allow links to change bytes in data sections
+            SegMap::mapAllSegments(this);
+            ConductorPasses(conductor).newMirrorPasses(program);
+        }
+        //copyCodeToNewAddresses(sandbox, true);
+        Generator(sandbox, true).generateCode(conductor->getProgram(), order);
+        moveCodeMakeExecutable(sandbox);
+    }
+
+    //generator.generate(outputFile);
+    generator.generateContent("");
+
+    // Unmap segmants
+    SegMap::unmapAllSegments(this);
+    
+    return generator.getData()->getSectionList();
+}
+
 
 bool ConductorSetup::generateKernel(const char *outputFile) {
     auto sandbox = makeKernelSandbox(outputFile);

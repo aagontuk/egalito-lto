@@ -24,6 +24,7 @@ std::ostream &operator << (std::ostream &stream, DeferredValue &dv);
 class DeferredValueCString : public DeferredValue {
 public:
     virtual void writeTo(std::ostream &stream);
+    virtual void writeToMem(void *dest);
 protected:
     virtual const char *getPtr() const = 0;
 };

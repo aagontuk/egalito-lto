@@ -50,7 +50,10 @@ void MirrorGen::generateContent(const std::string &filename) {
     pipeline.add(new MakeDynsymHash());  // after all .dynsym entries added
     pipeline.add(new TextSectionCreator());
     pipeline.add(new GenerateSectionTable());
-    pipeline.add(new ElfFileWriter(filename));
+    
+    if(filename != "") {
+        pipeline.add(new ElfFileWriter(filename));
+    }
 
     pipeline.execute();
 }

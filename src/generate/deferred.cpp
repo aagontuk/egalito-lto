@@ -17,6 +17,10 @@ void DeferredValueCString::writeTo(std::ostream &stream) {
     stream.write(getPtr(), getSize());
 }
 
+void DeferredValueCString::writeToMem(void *dest) {
+    memcpy(dest, (void *)getPtr(), getSize());
+}
+
 size_t DeferredStringList::add(const std::string &data, bool withNull) {
     size_t oldIndex = output.length();
     size_t len = data.length();

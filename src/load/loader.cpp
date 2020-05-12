@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <cstdio>  // for std::fflush
 #include <cstdlib>  // for getenv
 #include <unistd.h>  // for STDERR_FILENO
@@ -45,6 +46,9 @@
 #include "log/registry.h"
 #include "log/temp.h"
 #include "log/log.h"
+#include "conductor/interface.h"
+#include "operation/find2.h"
+#include "generate/deferred.h"
 
 extern address_t egalito_entry;
 extern const char *egalito_initial_stack;
@@ -82,6 +86,29 @@ bool EgalitoLoader::parse(const char *filename) {
     return true;
 }
 
+SectionList *EgalitoLoader::parseOrderFile(const char *executable, const char *orderfile) {
+    EgalitoInterface egalito(false, true);
+    egalito.initializeParsing(); 
+
+    auto module = egalito.parse(executable);
+
+    // parse order file
+    egalito.getSetup()->parseOrderFile(orderfile);
+    auto order = egalito.getSetup()->getFunctionOrder();
+
+    std::vector<Function *> functionOrder;
+
+    for(auto fname : *order) {
+        auto f = ChunkFind2(egalito.getConductor()).findFunctionInModule(fname.c_str(), module);
+
+        if(f) {
+            functionOrder.push_back(f); 
+        }
+    }
+    
+    return egalito.generate(functionOrder);
+}
+
 void EgalitoLoader::setupEnvironment(int argc, int remove_count, char *argv[]) {
     adjustAuxiliaryVector(argv, setup->getElfMap(), nullptr);
     auto adjust = removeLoaderFromArgv(argv, remove_count);
@@ -96,7 +123,14 @@ void EgalitoLoader::setupEnvironment(int argc, int remove_count, char *argv[]) {
     this->envp = environ;
     LoaderEmulator::getInstance().setStackLinks(argv, envp);
 
-    SegMap::mapAllSegments(setup);
+    try {
+        SegMap::mapAllSegments(setup);
+    }
+    catch(const char *message) {
+        std::cout << "Exception: " << message << std::endl; 
+        exit(-3);
+    }
+
     LoaderEmulator::getInstance().initRT(setup->getConductor());
 
     // assign addresses of global variables passed-through to target
@@ -341,7 +375,8 @@ int main(int argc, char *argv[]) {
     EgalitoLoader loader;
     
     if(order_file) {
-        egalito_conductor_setup->parseOrderFile(order_file);
+        auto sectionList = loader.parseOrderFile(program, order_file);
+        //egalito_conductor_setup->setSectionList(sectionList);
     }
 
     if(loader.parse(program)) {

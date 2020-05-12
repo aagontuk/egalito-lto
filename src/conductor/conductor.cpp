@@ -1,3 +1,4 @@
+#include <iostream>
 #include <cassert>
 #include "config.h"
 #include "conductor.h"
@@ -53,14 +54,15 @@ Module *Conductor::parseAnything(const std::string &fullPath, Library::Role role
     if(role == Library::ROLE_UNKNOWN) {
         role = Library::guessRole(fullPath);
     }
-    
+   
+    /*
+    if(sectionList) {
+        for(auto s : *sectionList) {
+            std::cout << s->getName() << std::endl; 
+        }
+    } 
+    */
     auto elf = new ElfMap(fullPath.c_str());
-
-    if(functionOrder->size() && role == Library::ROLE_MAIN) {
-        TextSection tsec(elf);  
-        tsec.reorder(*functionOrder);
-        elf->dumpToFile("main.re");
-    }
 
     auto internalName = Library::determineInternalName(fullPath, role);
     auto library = new Library(internalName, role);
@@ -143,7 +145,7 @@ Module *Conductor::parse(ElfMap *elf, Library *library) {
     LOG(1, "\n=== BUILDING ELF DATA STRUCTURES for ["
         << space->getName() << "] ===");
     space->findSymbolsAndRelocs();
-    ElfDynamic(getLibraryList()).parse(elf, library);
+    ElfDynamic(getLibraryList()).parse(elf, library); // Collects all the dependent libraries
 
     LOG(1, "--- RUNNING DEFAULT ELF PASSES for ["
         << space->getName() << "] ---");
