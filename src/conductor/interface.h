@@ -73,8 +73,8 @@ public:
     */
     void generate(const std::string &outputName);
 
-    /** Generates new ELF sections according to function order. */
-    SectionList *generate(const std::vector<Function *> &order);
+    /** Generates new ELF and map into memory. */
+    void *generate(const std::vector<Function *> &order);
 
     void generate(const std::string &outputName,
         const std::vector<Function *> &order);

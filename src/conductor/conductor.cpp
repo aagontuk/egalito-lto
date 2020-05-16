@@ -28,7 +28,6 @@
 #include "pass/findinitfuncs.h"
 #include "disasm/objectoriented.h"
 #include "transform/data.h"
-#include "elf/textsection.h"
 
 #include "parseoverride.h"
 
@@ -49,21 +48,20 @@ Conductor::~Conductor() {
 }
 
 Module *Conductor::parseAnything(const std::string &fullPath, Library::Role role,
-        std::vector<std::string> *functionOrder) {
+        void *elfmap) {
 
     if(role == Library::ROLE_UNKNOWN) {
         role = Library::guessRole(fullPath);
     }
    
-    /*
-    if(sectionList) {
-        for(auto s : *sectionList) {
-            std::cout << s->getName() << std::endl; 
-        }
+    ElfMap *elf;
+    if(elfmap) {
+        elf = new ElfMap(elfmap);
     } 
-    */
-    auto elf = new ElfMap(fullPath.c_str());
-
+    else {
+        elf = new ElfMap(fullPath.c_str());
+    }
+    
     auto internalName = Library::determineInternalName(fullPath, role);
     auto library = new Library(internalName, role);
     library->setResolvedPath(fullPath);

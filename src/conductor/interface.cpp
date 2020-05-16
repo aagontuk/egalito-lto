@@ -115,7 +115,7 @@ void EgalitoInterface::generate(const std::string &outputName,
     setup.generateMirrorELF(outputName.c_str(), order);
 }
 
-SectionList *EgalitoInterface::generate(const std::vector<Function *> &order) {
+void *EgalitoInterface::generate(const std::vector<Function *> &order) {
     auto program = getProgram();
     prepareForGeneration(false);
 
@@ -130,7 +130,7 @@ SectionList *EgalitoInterface::generate(const std::vector<Function *> &order) {
     IFuncPLTs ifuncPLTs;
     program->accept(&ifuncPLTs);
 
-    return setup.generateELFSectionList(order);
+    return setup.generateMirrorELF(order);
 }
 
 void EgalitoInterface::assignNewFunctionAddresses() {

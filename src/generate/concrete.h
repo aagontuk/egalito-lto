@@ -135,6 +135,23 @@ private:
     void serialize();
 };
 
+class ElfMemWriter : public ConcreteElfOperation {
+private:
+    void *map;
+    size_t memMapLength;
+public:
+    ElfMemWriter() {}
+
+    virtual void execute();
+    virtual std::string getName() const { return "ElfMemWriter"; }
+    void *getMemMap() { return map; }
+    void setMemMapLength(size_t length) { memMapLength = length; }
+    size_t getMemMapLength() { return memMapLength; }
+private:
+    void updateOffsets();
+    void serialize();
+};
+
 
 class MakePaddingSection : public NormalElfOperation {
 private:

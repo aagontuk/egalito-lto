@@ -48,7 +48,6 @@
 #include "log/log.h"
 #include "conductor/interface.h"
 #include "operation/find2.h"
-#include "generate/deferred.h"
 
 extern address_t egalito_entry;
 extern const char *egalito_initial_stack;
@@ -86,7 +85,7 @@ bool EgalitoLoader::parse(const char *filename) {
     return true;
 }
 
-SectionList *EgalitoLoader::parseOrderFile(const char *executable, const char *orderfile) {
+void *EgalitoLoader::parseOrderFile(const char *executable, const char *orderfile) {
     EgalitoInterface egalito(false, true);
     egalito.initializeParsing(); 
 
@@ -105,7 +104,7 @@ SectionList *EgalitoLoader::parseOrderFile(const char *executable, const char *o
             functionOrder.push_back(f); 
         }
     }
-    
+
     return egalito.generate(functionOrder);
 }
 
@@ -142,7 +141,9 @@ void EgalitoLoader::generateCode() {
         this->sandbox = setup->makeShufflingSandbox();
     }
     else {
+        std::cout << "DEBUG: making loader sandbox.\n";
         this->sandbox = setup->makeLoaderSandbox();
+        std::cout << "DEBUG: .\n";
     }
     setup->getConductor()->setupIFuncLazySelector();
 
@@ -375,8 +376,14 @@ int main(int argc, char *argv[]) {
     EgalitoLoader loader;
     
     if(order_file) {
-        auto sectionList = loader.parseOrderFile(program, order_file);
-        //egalito_conductor_setup->setSectionList(sectionList);
+        try {
+            void *elf = loader.parseOrderFile(program, order_file);
+            egalito_conductor_setup->setElfMemoryMap(elf);
+        }
+        catch(const char *msg) {
+            std::cout << "Error: " << msg << std::endl; 
+        }
+        
     }
 
     if(loader.parse(program)) {

@@ -1,4 +1,4 @@
-#include <cstring>  // for memset
+#include <cstring>  // for memset and memcpy
 #include "concretedeferred.h"
 #include "section.h"
 #include "sectionlist.h"

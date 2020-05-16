@@ -19,6 +19,8 @@
 #include "generate/uniongen.h"
 #include "generate/mirrorgen.h"
 #include "generate/kernelgen.h"
+#include "generate/sectionlist.h"
+#include "generate/section.h"
 #include "log/registry.h"
 #include "log/log.h"
 #include "log/temp.h"
@@ -82,7 +84,7 @@ Module *ConductorSetup::injectElfFiles(const char *executable, Library::Role rol
     if(!conductor) createNewProgram();
 
     // executable can be a shared library. this->elf stores main module
-    auto firstModule = conductor->parseAnything(executable, role, getFunctionOrder());
+    auto firstModule = conductor->parseAnything(executable, role, getElfMemoryMap());
     if(firstModule->getLibrary()->getRole() == Library::ROLE_MAIN) {
         this->elf = firstModule->getElfSpace()->getElfMap();
 
@@ -378,10 +380,11 @@ bool ConductorSetup::generateMirrorELF(const char *outputFile,
 
     //generator.generate(outputFile);
     generator.generateContent(outputFile);
+    SegMap::unmapAllSegments(this);
     return true;
 }
 
-SectionList *ConductorSetup::generateELFSectionList(const std::vector<Function *> &order) {
+void *ConductorSetup::generateMirrorELF(const std::vector<Function *> &order) {
 
     auto sandbox = makeStaticExecutableSandbox();
     auto backing = static_cast<MemoryBufferBacking *>(sandbox->getBacking());
@@ -405,13 +408,12 @@ SectionList *ConductorSetup::generateELFSectionList(const std::vector<Function *
         moveCodeMakeExecutable(sandbox);
     }
 
-    //generator.generate(outputFile);
-    generator.generateContent("");
+    void *mem = generator.generateContent();
 
     // Unmap segmants
     SegMap::unmapAllSegments(this);
     
-    return generator.getData()->getSectionList();
+    return mem;
 }
 
 

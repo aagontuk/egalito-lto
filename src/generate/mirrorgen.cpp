@@ -57,3 +57,32 @@ void MirrorGen::generateContent(const std::string &filename) {
 
     pipeline.execute();
 }
+
+void *MirrorGen::generateContent(){
+    ElfPipeline pipeline(getData(), getConfig());
+    pipeline.addDependency("AssignSectionsToSegments");
+
+    for(auto module : CIter::children(getData()->getProgram())) {
+        ModuleGen::Config config;
+        config.setUniqueSectionNames(false);
+        config.setRelocsForAbsoluteRefs(true);
+        config.setCodeBacking(dynamic_cast<MemoryBufferBacking *>
+            (getData()->getBacking()));
+        auto moduleGen = ModuleGen(config, module, getData()->getSectionList());
+        moduleGen.makeDataSections();
+        moduleGen.makeTextAccumulative();
+        if(true || module->getLibrary()->getRole() == Library::ROLE_LIBC) {
+            moduleGen.makeTLS();
+        }
+    }
+    pipeline.add(new MakeDynsymHash());  // after all .dynsym entries added
+    pipeline.add(new TextSectionCreator());
+    pipeline.add(new GenerateSectionTable());
+    
+    ElfMemWriter *elfmemwriter = new ElfMemWriter();
+    pipeline.add(elfmemwriter);
+
+    pipeline.execute();
+
+    return elfmemwriter->getMemMap();
+}

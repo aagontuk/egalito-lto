@@ -25,10 +25,6 @@ ElfMap::ElfMap(const char *filename) {
     setup();
 }
 
-ElfMap::ElfMap(SectionList *sectionList) {
-
-}
-
 ElfMap::ElfMap(void *self) : map(self), length(0), fd(-1) {
     setup();
 }

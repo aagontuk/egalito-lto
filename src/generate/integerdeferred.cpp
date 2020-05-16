@@ -1,4 +1,5 @@
 #include "integerdeferred.h"
+#include "cstring"
 
 void DeferredIntegerList::add(uint32_t value) {
     std::string str{reinterpret_cast<char *>(&value), sizeof(value)};

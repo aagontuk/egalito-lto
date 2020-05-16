@@ -2,8 +2,6 @@
 #define EGALITO_LOAD_LOADER_H
 
 #include "conductor/setup.h"
-#include "generate/section.h"
-#include "generate/sectionlist.h"
 
 class EgalitoLoader {
 private:
@@ -16,7 +14,7 @@ private:
 public:
     EgalitoLoader();
     bool parse(const char *filename);
-    SectionList *parseOrderFile(const char *executable, const char *orderfile);
+    void *parseOrderFile(const char *executable, const char *orderfile);
 
     /* these must be called in this order */
     void setupEnvironment(int argc, int remove_count, char *argv[]);

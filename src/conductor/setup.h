@@ -31,10 +31,10 @@ private:
     address_t sandboxBase;
 
     std::vector<std::string> functionOrder;
-    //SectionList *sectionList;
+    void *elfmap;
 public:
     ConductorSetup() : elf(nullptr), egalito(nullptr), conductor(nullptr),
-        sandboxBase(SANDBOX_BASE_ADDRESS)/*, sectionList(nullptr)*/ {}
+        sandboxBase(SANDBOX_BASE_ADDRESS), elfmap(nullptr) {}
     Module *parseElfFiles(const char *executable, bool withSharedLibs = true,
         bool injectEgalito = false);
     Module *injectElfFiles(const char *executable, bool withSharedLibs = true,
@@ -57,7 +57,7 @@ public:
     bool generateMirrorELF(const char *outputFile);
     bool generateMirrorELF(const char *outputFile,
         const std::vector<Function *> &order);
-    SectionList *generateELFSectionList(const std::vector<Function *> &order);
+    void *generateMirrorELF(const std::vector<Function *> &order);
     bool generateKernel(const char *outputFile);
     void moveCode(Sandbox *sandbox, bool useDisps = true);
 public:
@@ -70,8 +70,8 @@ public:
     Conductor *getConductor() const { return conductor; }
 public:
     void parseOrderFile(const char *fileName);
-    //void setSectionList(SectionList *sections) { sectionList = sections; }
-    //SectionList *getSectionList() { return sectionList; }
+    void setElfMemoryMap(void *elf) { elfmap = elf; }
+    void *getElfMemoryMap() { return elfmap; }
     std::vector<std::string> *getFunctionOrder(void) { return &functionOrder; }
     void dumpElfSpace(ElfSpace *space);
     void dumpFunction(const char *function, ElfSpace *space = nullptr);

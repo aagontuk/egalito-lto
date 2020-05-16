@@ -2,6 +2,7 @@
 #define EGALITO_GENERATE_DEFERRED_H
 
 #include <iostream>  // for debugging
+#include <typeinfo>
 #include <vector>
 #include <map>
 #include <string>
@@ -24,7 +25,6 @@ std::ostream &operator << (std::ostream &stream, DeferredValue &dv);
 class DeferredValueCString : public DeferredValue {
 public:
     virtual void writeTo(std::ostream &stream);
-    virtual void writeToMem(void *dest);
 protected:
     virtual const char *getPtr() const = 0;
 };

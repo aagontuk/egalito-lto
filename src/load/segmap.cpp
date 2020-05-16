@@ -44,6 +44,7 @@ void SegMap::mapAllSegments(ConductorSetup *setup) {
     }
 #else
     for(auto module : CIter::modules(setup->getConductor()->getProgram())) {
+        std::cout << "Mapping: " << module->getName() << std::endl;
         for(auto region : CIter::regions(module)) {
             if(dynamic_cast<TLSDataRegion *>(region)) continue;
             mapRegion(region);
@@ -185,6 +186,9 @@ void SegMap::mapRegion(DataRegion *region) {
     size_t address_offset = address - address_rounded;
     size_t memsz_pages = ROUND_UP(region->getSize() + address_offset);
 
+    std::cout << "Region: " << region->getName() << " Addr: " << std::hex << address
+        << " Addr_rnd: " << address_rounded << " Addr_end: " << address_rounded + memsz_pages
+        << " pages: " << memsz_pages << std::endl;
     LOG(1, "mmap " << std::hex << address_rounded << " pages=" << memsz_pages);
 
     // map enough pages for all data (including zero pages)
@@ -193,6 +197,7 @@ void SegMap::mapRegion(DataRegion *region) {
         prot,
         MAP_ANONYMOUS | MAP_PRIVATE,
         -1, 0);
+    std::cout << "mmap: " << std::hex << mem << std::endl;
     if(mem == nullptr) throw "mmap DataRegion returned NULL!";
     if(mem != (void *)address_rounded) {
         if(!memsz_pages) {

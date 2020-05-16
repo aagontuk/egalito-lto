@@ -11,6 +11,7 @@ public:
     virtual void preCodeGeneration();
     virtual void afterAddressAssign();
     virtual void generateContent(const std::string &filename);
+    void *generateContent();
 };
 
 #endif

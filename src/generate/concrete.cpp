@@ -1227,6 +1227,35 @@ void ElfFileWriter::serialize() {
     chmod(filename.c_str(), 0744);
 }
 
+void ElfMemWriter::execute() {
+    updateOffsets();
+    serialize();
+}
+
+void ElfMemWriter::updateOffsets() {
+    // every Section is written to the memory, even those without SectionHeaders
+    size_t offset = 0;
+    for(auto section : *getSectionList()) {
+        LOG(1, "section [" << section->getName() << "] is at offset " << std::dec << offset);
+        section->setOffset(offset);
+        offset += section->getContent()->getSize();
+    }
+}
+
+void ElfMemWriter::serialize() {
+    std::ostringstream elfcontent;
+    void *dest = map;
+    for(auto s : *getSectionList()) {
+        elfcontent << *s;
+    } 
+    
+    map = malloc(elfcontent.str().length());
+    if(!map) throw "Can't allocate memory for writing sections\n";
+    setMemMapLength(elfcontent.str().length());
+
+    memcpy(map, elfcontent.str().c_str(), elfcontent.str().length());
+}
+
 MakePaddingSection::MakePaddingSection(size_t desiredAlignment, bool isIsolatedPadding)
     : desiredAlignment(desiredAlignment), isIsolatedPadding(isIsolatedPadding) {
 
