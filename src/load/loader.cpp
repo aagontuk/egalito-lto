@@ -61,6 +61,7 @@ static std::chrono::high_resolution_clock::time_point masterLoadTime;
 
 EgalitoLoader::EgalitoLoader() : sandbox(nullptr) {
     this->setup = new ConductorSetup();
+    //this->setup->setSandboxBase(0x50000000);
     ::egalito_conductor_setup = setup;
 }
 
@@ -105,6 +106,8 @@ void *EgalitoLoader::parseOrderFile(const char *executable, const char *orderfil
         }
     }
 
+    egalito.generate("reorder_binary", functionOrder);
+    
     return egalito.generate(functionOrder);
 }
 
@@ -142,6 +145,7 @@ void EgalitoLoader::generateCode() {
     }
     else {
         std::cout << "DEBUG: making loader sandbox.\n";
+        //setup->setSandboxBase(0x50000000);
         this->sandbox = setup->makeLoaderSandbox();
         std::cout << "DEBUG: .\n";
     }
@@ -376,14 +380,7 @@ int main(int argc, char *argv[]) {
     EgalitoLoader loader;
     
     if(order_file) {
-        try {
-            void *elf = loader.parseOrderFile(program, order_file);
-            egalito_conductor_setup->setElfMemoryMap(elf);
-        }
-        catch(const char *msg) {
-            std::cout << "Error: " << msg << std::endl; 
-        }
-        
+        egalito_conductor_setup->parseOrderFile(order_file);
     }
 
     if(loader.parse(program)) {

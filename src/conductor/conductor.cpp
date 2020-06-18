@@ -34,6 +34,8 @@
 #include "log/log.h"
 #include "log/temp.h"
 
+#include "elf/textsection.h"
+
 IFuncList *egalito_ifuncList __attribute__((weak));
 
 Conductor::Conductor() : mainThreadPointer(0), ifuncList(nullptr) {
@@ -48,20 +50,19 @@ Conductor::~Conductor() {
 }
 
 Module *Conductor::parseAnything(const std::string &fullPath, Library::Role role,
-        void *elfmap) {
+        std::vector<std::string> *functionOrder) {
 
     if(role == Library::ROLE_UNKNOWN) {
         role = Library::guessRole(fullPath);
     }
-   
-    ElfMap *elf;
-    if(elfmap) {
-        elf = new ElfMap(elfmap);
-    } 
-    else {
-        elf = new ElfMap(fullPath.c_str());
-    }
     
+    auto elf = new ElfMap(fullPath.c_str());
+
+    if((*functionOrder).size()) {
+        TextSection tsec(elf);
+        tsec.reorder(*functionOrder);
+    }
+   
     auto internalName = Library::determineInternalName(fullPath, role);
     auto library = new Library(internalName, role);
     library->setResolvedPath(fullPath);

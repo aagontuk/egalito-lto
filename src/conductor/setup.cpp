@@ -84,7 +84,7 @@ Module *ConductorSetup::injectElfFiles(const char *executable, Library::Role rol
     if(!conductor) createNewProgram();
 
     // executable can be a shared library. this->elf stores main module
-    auto firstModule = conductor->parseAnything(executable, role, getElfMemoryMap());
+    auto firstModule = conductor->parseAnything(executable, role, getFunctionOrder());
     if(firstModule->getLibrary()->getRole() == Library::ROLE_MAIN) {
         this->elf = firstModule->getElfSpace()->getElfMap();
 
@@ -159,12 +159,18 @@ void ConductorSetup::setBaseAddresses() {
             ? module->getElfSpace()->getElfMap() : nullptr;
         // this address has to be low enough to express negative offset in
         // jump table slots (to represent an index)
-#if 0 // use 0x1X000000 for module addrs (X starts at 0)
-        if(setBaseAddress(module, elfMap, 0x10000000 + i*0x1000000)) {
-#else // use 0x0X000000 for module addrs (X starts at 1)
-        if(setBaseAddress(module, elfMap, (i+1)*0x1000000)) {
-#endif
-            i ++;
+        // use 0x1X000000 for module addrs (X starts at 0)
+        // if(setBaseAddress(module, elfMap, 0x10000000 + i*0x1000000)) {
+        // use 0x0X000000 for module addrs (X starts at 1)
+        if(i == 1) {
+            if(setBaseAddress(module, elfMap, (i+2)*0x1000000)) {
+                i += 2; 
+            }
+        }
+        else {
+            if(setBaseAddress(module, elfMap, (i+1)*0x1000000)) {
+                i ++;
+            }
         }
     }
 

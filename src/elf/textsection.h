@@ -50,6 +50,13 @@ private:
     
     void updateSymbols();
     void fixRelativeInstructions();
+    void patchCALLInstruction(char *elfmap, address_t addr, address_t sym_addr);
+    
+    void patchRIPInstruction(char *elfmap, address_t addr, std::string &insn,
+                                uint32_t oldOffset, uint32_t newOffset);
+
+    void encodeInstruction(std::string insn, unsigned char *bytes, size_t *size);
+    
     void fixEntryPoint();
     
     void printHex(const char *content, int length);
@@ -84,38 +91,32 @@ class RelativeInstruction {
 public:
     enum Type {
         CALL,
-        PLTCALL,
         RIP 
     };
 
 private:
-    std::string callingFunctionName;
     address_t instructionAddress;
-    uint32_t callOffset;
-    Type instructionType;
-    std::string mnemonic;
+    std::string instructionAsm;
     int instructionSize;
-    uint8_t firstByte;
+    Type instructionType;
+    uint32_t offset;
+    std::string callingFunctionName;
 
 public:
-    RelativeInstruction(const char *name, address_t addr, uint32_t offset, Type type)
-        : callingFunctionName(name), instructionAddress(addr), callOffset(offset),
-            instructionType(type) {}
+    RelativeInstruction() {}
 
-    Type getType() { return instructionType; }
-    std::string &getMnemonic() { return mnemonic; }
-    int getInstructionSize() { return instructionSize; }
-    uint8_t &getFistByte() { return  firstByte; }
     address_t getAddress() { return instructionAddress; }
-    address_t getOffset() { return callOffset; }
+    std::string &getInstructionAsm() { return instructionAsm; }
+    int getInstructionSize() { return instructionSize; }
+    Type getType() { return instructionType; }
+    uint32_t getOffset() { return offset; }
     std::string &getCallingFunctionName() { return callingFunctionName; }
     
-    void setType(Type type) { instructionType =type; }
-    void setMnemonic(std::string nc) { mnemonic = nc; }
-    void setInstructionSize(int size) { instructionSize = size; }
-    void setFirstByte(uint8_t byte) { firstByte = byte; }
     void setAddress(address_t addr) { instructionAddress = addr; }
-    void setOffset(address_t offset) { callOffset = offset; }
+    void setInstructionAsm(std::string insnAsm) { instructionAsm = insnAsm; }
+    void setInstructionSize(int size) { instructionSize = size; }
+    void setType(Type type) { instructionType =type; }
+    void setOffset(uint32_t off) { offset = off; }
     void setCallingFunctionName(std::string name) { callingFunctionName = name; }
 };
 

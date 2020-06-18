@@ -76,6 +76,8 @@ public:
     void dumpElfSpace(ElfSpace *space);
     void dumpFunction(const char *function, ElfSpace *space = nullptr);
     address_t getEntryPoint();
+    address_t getSandboxBase(){ return sandboxBase; }
+    void setSandboxBase(address_t base) { sandboxBase = base; }
 private:
     void parseEgalito(bool fromArchive = false);
     void findEntryPointFunction();

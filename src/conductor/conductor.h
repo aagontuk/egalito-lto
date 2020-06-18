@@ -28,7 +28,7 @@ public:
     ~Conductor();
 
     Module *parseAnything(const std::string &fullPath,
-        Library::Role role = Library::ROLE_UNKNOWN, void *elfmap = nullptr);
+        Library::Role role = Library::ROLE_UNKNOWN, std::vector<std::string> *functionOrder = nullptr);
     Module *parseExecutable(ElfMap *elf, const std::string &fullPath = "");
     Module *parseEgalito(ElfMap *elf, const std::string &fullPath = "");
     void parseEgalitoElfSpaceOnly(ElfMap *elf, Module *module,

@@ -2,7 +2,9 @@
 #include <string>
 #include <cstring>
 #include <algorithm>
+#include <sstream>
 #include <capstone/capstone.h>
+#include <keystone/keystone.h>
 #include "textsection.h"
 
 TextSection::TextSection(ElfMap *sourceElfMap): sourceElfMap(sourceElfMap){
@@ -82,6 +84,7 @@ void TextSection::scanRelativeInstructions() {
 
     if(cs_open(CS_ARCH_X86, CS_MODE_64, &handle) != CS_ERR_OK)
         throw "capstone open error";
+    cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
 
     count = cs_disasm(handle,
                reinterpret_cast<const uint8_t *>(sourceElfMap->getCharmap()) + startAddress,
@@ -92,83 +95,67 @@ void TextSection::scanRelativeInstructions() {
         
         for(j = 0; j < count; j++) {
             if(std::string(insn[j].mnemonic) == "call" || strstr(insn[j].op_str, "rip")) {
-                
-                address_t addr = insn[j].address;
-                uint8_t firstByte = insn[j].bytes[0];
-                
-                // Some instruction sizes are wrong
-                // Is there any instruction lengh greater than 7?
-                int size;
-                if(insn[j].size > 7){
-                    size = 7; 
+                std::string instruction(insn[j].mnemonic);
+                instruction.append(" ");
+                instruction.append(insn[j].op_str);
+
+                RelativeInstruction *ripInsn = new RelativeInstruction();
+                ripInsn->setAddress(insn[j].address);
+                ripInsn->setInstructionAsm(instruction);
+                ripInsn->setInstructionSize(insn[j].size);
+
+                // immediate is assumed to be 32 bit this can be a problem in future
+                uint32_t offset = 0;
+                uint32_t imm = 0;
+                address_t target = 0;
+
+                // call instructions can have immediate value or can be relative
+                if(std::string(insn[j].mnemonic) == "call") {
+                    offset = insn[j].detail->x86.disp;
+                    imm = insn[j].detail->x86.operands[0].imm;
                 }
                 else {
-                    size = insn[j].size; 
+                    offset = insn[j].detail->x86.disp; 
                 }
-                
-                if(strstr(insn[j].op_str, "rip")) {
-                    uint32_t *offset;
 
-                    if(firstByte == 0x48 || firstByte == 0x4c) {
-                        
-                        offset = (uint32_t *)(sourceElfMap->getCharmap() + 
-                            insn[j].address + 3);
-                    }
-                    else {
-                        offset = (uint32_t *)(sourceElfMap->getCharmap() + 
-                            insn[j].address + 2);
-                    }
+                // relative addressing
+                if(offset) {
+                    target = insn[j].address + insn[j].size + offset; 
+                    ripInsn->setType(RelativeInstruction::RIP);
+                    ripInsn->setOffset(offset);
+                }
+                else {  // direct addressing
+                    target = imm; 
+                    ripInsn->setType(RelativeInstruction::CALL);
+                    ripInsn->setOffset(offset);
+                }
 
-                    address_t funcAddress = (int)*offset + addr + size;
-
-                    const char *funcName = "";
+                if(target >= pltStart && target <= pltEnd) {
+                    ripInsn->setCallingFunctionName("plt");
+                    ripInsn->setOffset(target);
+                }
+                else if(target <= endAddress) {
+                    Symbol *sym = symbols->find(target);
                     
-                    if(funcAddress <= endAddress) {
-                        Symbol *sym = symbols->find(funcAddress);
-                        if(sym) {
-                            funcName = sym->getName(); 
-                        }    
-                    }
-                    
-                    RelativeInstruction *ripInsn = new RelativeInstruction(funcName, addr,
-                            *offset, RelativeInstruction::RIP);
-                    ripInsn->setInstructionSize(size);
-                    ripInsn->setFirstByte(firstByte);
-
-                    if(ripInsn) {
-                        auto fn = searchFunctionByAddress(addr); 
-                        if(fn) fn->addInstruction(ripInsn);
-                    }
+                    if(sym) {
+                        ripInsn->setCallingFunctionName(sym->getName());
+                    }    
                 }
                 else {
-                    uint32_t *offset = (uint32_t *)(sourceElfMap->getCharmap() + 
-                            insn[j].address + size - 4);
-                    address_t funcAddress = (int)*offset + addr + size;
-                    
-                    /* Is the call offset pointing to PLT section? */
-                    if(funcAddress >= pltStart && funcAddress <= pltEnd) {
-                        RelativeInstruction *pltCall = new RelativeInstruction("plt", addr,
-                                *offset, RelativeInstruction::PLTCALL);
-                        
-                        if(pltCall) {
-                            auto fn = searchFunctionByAddress(addr); 
-                            if(fn) fn->addInstruction(pltCall);
-                        }
-                    }
-                    else {
-                        Symbol *sym = symbols->find(funcAddress);
-                        if(sym) {
-                            const char *funcName = sym->getName();
-                            RelativeInstruction *normCall = new RelativeInstruction(funcName,
-                                    addr, 0, RelativeInstruction::CALL);
-                            if(normCall) {
-                                auto fn = searchFunctionByAddress(addr); 
-                                if(fn) fn->addInstruction(normCall);
-                            }
-
-                        }
-                    }
+                    ripInsn->setCallingFunctionName(""); 
                 }
+
+                auto fn = searchFunctionByAddress(insn[j].address);
+                if(fn) {
+                    fn->addInstruction(ripInsn);
+                }
+
+                std::cout << "addr: " << ripInsn->getAddress() << std::endl;
+                std::cout << "insn: " << ripInsn->getInstructionAsm() << std::endl;
+                std::cout << "disp: " << offset << std::endl;
+                std::cout << "immd: " << imm << std::endl;
+                std::cout << "taddr: " << target << std::endl;
+                std::cout << "tname: " << ripInsn->getCallingFunctionName() << "\n\n";
             }
         }
 
@@ -216,14 +203,22 @@ void TextSection::reorder(std::vector<std::string> orderList) {
         int offset = 0;
         
         if(!bytesWritten) {
+            std::cout << "func: " << l << std::endl;
+            std::cout << std::hex << "oaddr: " << tf->getStartAddress() << std::endl;
             offset = this->startAddress - tf->getStartAddress();
             tf->setStartAddress(this->startAddress);
             tf->setEndAddress(this->startAddress + fsize - 1);
+            std::cout << std::hex << "naddr: " << tf->getStartAddress() << std::endl;
+            std::cout << std::hex << "ocng: " << offset << std::endl;
         }
         else {
+            std::cout << "func: " << l << std::endl;
+            std::cout << std::hex << "oaddr: " << tf->getStartAddress() << std::endl;
             offset = (this->startAddress + bytesWritten) - tf->getStartAddress();
             tf->setStartAddress(this->startAddress + bytesWritten);
             tf->setEndAddress(tf->getStartAddress() + fsize - 1);
+            std::cout << std::hex << "naddr: " << tf->getStartAddress() << std::endl;
+            std::cout << std::hex << "ocng: " << offset << std::endl;
         }
 
         tf->setOffsetChange(offset);
@@ -268,69 +263,112 @@ void TextSection::fixRelativeInstructions() {
     char *elfmap = sourceElfMap->getCharmap();
 
     for(auto fn : functionList) {
-        for(auto call : fn->getInstructionList()) {
-            if(call->getType() == RelativeInstruction::PLTCALL) {
-                int offset = fn->getOffsetChange();
-                if(offset) {
-                    call->setAddress(call->getAddress() + offset);
-                    call->setOffset(call->getOffset() - offset);
-                    uint32_t *newOffset = (uint32_t *)(elfmap + call->getAddress() + 1);
-                    *newOffset = call->getOffset();
-                } 
-            }
-            else if(call->getType() == RelativeInstruction::CALL) {
-                int offset = fn->getOffsetChange();
-                if(offset) {
-                    call->setAddress(call->getAddress() + offset);
-                }
+        for(auto insn : fn->getInstructionList()) {
 
-                Symbol *sym = symbols->find(call->getCallingFunctionName().c_str());
-                if(sym) {
-                    offset = sym->getAddress() - (call->getAddress() + 5);
-                    uint32_t *newOffset = (uint32_t *)(elfmap + call->getAddress() + 1);
-                    *newOffset = offset;
-                }
-            }
-            else {
-                int offset = fn->getOffsetChange();
+            // set new address of the instructions
+            insn->setAddress(insn->getAddress() + fn->getOffsetChange());
+            
+            // CALL instructions that uses fixed address
+            if(insn->getType() == RelativeInstruction::CALL) {
                 
-                if(offset || call->getCallingFunctionName() != "") {
-                    // Old next instruction address
-                    address_t oldNextInsAddress = call->getAddress() +
-                        call->getInstructionSize();
-                    
-                    // Adjust address according to offset change
-                    call->setAddress(call->getAddress() + offset);
-                    
-                    // New next instruction address
-                    address_t nextInsAddress = call->getAddress() + 
-                        call->getInstructionSize();
-                    
-                    uint8_t firstByte = call->getFistByte();
-                    uint32_t *newOffset;
-                    
-                    if(firstByte == 0x4c || firstByte == 0x48) {
-                        newOffset = (uint32_t *)(elfmap + call->getAddress() + 3); 
+                // for plt calls offset is the distance from call instruction address to
+                // plt entry address
+                if(insn->getCallingFunctionName() == "plt") {
+                    // patch code
+                    patchCALLInstruction(elfmap, insn->getAddress(), insn->getOffset());
+                }
+                // for the other calls offet is the distance from current instruction to
+                // calling symbol address
+                else if(insn->getCallingFunctionName() != "plt" &&
+                        insn->getCallingFunctionName() != "") {
+                
+                    Symbol *sym = symbols->find(insn->getCallingFunctionName().c_str());
+                    if(sym) {
+                       // patch code  
+                       patchCALLInstruction(elfmap, insn->getAddress(), sym->getAddress());
                     }
-                    else {
-                        newOffset = (uint32_t *)(elfmap + call->getAddress() + 2); 
-                    }
-                    
-                    if(call->getCallingFunctionName() != "") {
-                        Symbol *sym = symbols->find(call->getCallingFunctionName().c_str());
+                }  
+            }
+            // all instructions involving RIP
+            else {
+                if(insn->getCallingFunctionName() != "") {
+                    Symbol *sym = symbols->find(insn->getCallingFunctionName().c_str());
+                    if(sym) {
+                        // patch code  
+                        uint32_t offset = sym->getAddress() - (insn->getAddress()
+                                            + insn->getInstructionSize());
                         
-                        if(sym) {
-                            *newOffset = sym->getAddress() - nextInsAddress;
-                        }
+                        patchRIPInstruction(elfmap, insn->getAddress(),
+                                insn->getInstructionAsm(), insn->getOffset(), offset);
                     }
-                    else {
-                        *newOffset = *newOffset - offset;
-                    }
+                }
+                else {
+                    // patch code
+                    uint32_t offset = insn->getOffset() - fn->getOffsetChange();
+                    
+                    patchRIPInstruction(elfmap, insn->getAddress(),
+                            insn->getInstructionAsm(), insn->getOffset(), offset);
                 }
             }
         } 
     }
 }
+
+void TextSection::patchRIPInstruction(char *elfmap, address_t addr, std::string &insn,
+                                        uint32_t oldOffset, uint32_t newOffset) {
+
+    std::stringstream oldOffset_ss;
+    std::stringstream newOffset_ss;
+
+    oldOffset_ss << std::hex << oldOffset;
+    newOffset_ss << std::hex << newOffset;
+
+    std::string new_insn(insn.replace(insn.find(oldOffset_ss.str()),
+                oldOffset_ss.str().length(), newOffset_ss.str()));
+    
+    unsigned char *bytes;
+    size_t size;
+   
+    bytes = (unsigned char *)malloc(15);
+    encodeInstruction(new_insn, bytes, &size);
+    memcpy(elfmap + addr, bytes, size);
+    free(bytes);
+}
+
+void TextSection::patchCALLInstruction(char *elfmap, address_t addr, address_t sym_addr) {
+    std::stringstream offset_ss;
+    offset_ss << "call " << static_cast<long>(sym_addr) - static_cast<long>(addr);
+
+    unsigned char *bytes;
+    size_t size;
+    
+    bytes = (unsigned char *)malloc(15);
+    encodeInstruction(offset_ss.str(), bytes, &size);
+    memcpy(elfmap + addr, bytes, size);
+    free(bytes);
+}
+
+void TextSection::encodeInstruction(std::string insn, unsigned char *bytes, size_t *size) {
+    ks_engine *ks; 
+    unsigned char *encode;
+    size_t count;
+
+    if(ks_open(KS_ARCH_X86, KS_MODE_64, &ks) != KS_ERR_OK) {
+        throw "Can't open ksm engine!";
+    }
+
+    if(ks_asm(ks, insn.c_str(), 0, &encode, size, &count) != KS_ERR_OK) {
+        throw "assembly failed!"; 
+    }
+
+    // What is wrong in allocating here?
+    // bytes = (unsigned char *)malloc(*size);
+    memcpy(bytes, encode, *size);
+    
+    ks_free(encode);
+    ks_close(ks);
+}
+
 
 void TextSection::fixEntryPoint() {
     ElfXX_Ehdr *ehdr = (ElfXX_Ehdr *)(sourceElfMap->getMap());
